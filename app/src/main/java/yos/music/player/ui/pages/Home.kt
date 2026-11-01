@@ -88,6 +88,8 @@ fun Home(
             navController.toUI(UI.Settings.Main)
         },
         extraTopPadding = 57.dp,
+        // 主页：纵向用系统默认滚动 -> 横向 Pager 不必等纵向惯性结束即可响应
+        customOverscroll = false,
         content = {
             item("RecommendCard") {
                 RecommendCard(imageViewModel)

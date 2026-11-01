@@ -209,6 +209,9 @@ fun Title(
     // 下拉刷新（opt-in）：传 onRefresh 才启用；未传时列表路径逐像素不变
     onRefresh: (() -> Unit)? = null,
     refreshing: Boolean = false,
+    // 自定义 overscroll/fling（每帧缩放+位移 + 自定义惯性）。主页有嵌套横向 Pager，
+    // 自定义惯性会让纵向未停稳时抢住手势，故主页传 false 改用系统默认滚动。
+    customOverscroll: Boolean = true,
     content: LazyListScope.() -> Unit
 ) =
     BaseTitle(
@@ -418,8 +421,12 @@ private fun BaseTitleGrid(
                         .titleCollapseTouchTracker(collapse)
                         .hazeSource(hazeState)
                         .layerBackdrop(titleBackdrop)
-                        .overScrollVertical(),
-                    flingBehavior = rememberOverscrollFlingBehavior { state },
+                        .then(if (customOverscroll) Modifier.overScrollVertical() else Modifier),
+                    flingBehavior = if (customOverscroll) {
+                        rememberOverscrollFlingBehavior { state }
+                    } else {
+                        androidx.compose.foundation.gestures.ScrollableDefaults.flingBehavior()
+                    },
                     columns = GridCells.Adaptive(minSize = minItemSize),
                     horizontalArrangement = Arrangement.spacedBy(15.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp),

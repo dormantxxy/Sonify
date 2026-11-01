@@ -320,7 +320,8 @@ fun RankDetail(
 
             itemsIndexed(
                 trackItems,
-                key = { index, _ -> songKeys.getOrElse(index) { "oob_$index" } }
+                key = { index, _ -> songKeys.getOrElse(index) { "oob_$index" } },
+                contentType = { _, _ -> "song" }
             ) { index, song ->
                 // 每行只构造一次展示模型：原先每次重组都调用 toDisplayMediaItem，
                 // 排行榜歌曲多、滚动时重组频繁，这部分是列表卡顿的来源之一。
@@ -339,9 +340,10 @@ fun RankDetail(
                             .fillMaxWidth()
                             // 右侧与首末分割线一致留 16dp，任何屏幕都不顶到边缘
                             .padding(start = 88.dp, end = 16.dp)
-                            .alpha(0.15f)
                             .height(0.5.dp)
-                            .background(Color.Black withNight Color.White)
+                            // 用带透明度的颜色代替 Modifier.alpha：alpha 会为每个 item
+                            // 单独创建离屏图层，长列表逐帧合成开销明显。
+                            .background((Color.Black withNight Color.White).copy(alpha = 0.15f))
                     )
                 }
             }
@@ -375,7 +377,6 @@ private fun RankDetailDivider(modifier: Modifier = Modifier) =
         modifier = modifier
             .fillMaxWidth()
             .padding(start = 18.dp, end = 16.dp)
-            .alpha(0.2f)
             .height(0.5.dp)
-            .background(Color.Black withNight Color.White)
+            .background((Color.Black withNight Color.White).copy(alpha = 0.2f))
     )
