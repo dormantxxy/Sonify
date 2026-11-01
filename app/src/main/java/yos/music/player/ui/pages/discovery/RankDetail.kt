@@ -323,31 +323,27 @@ fun RankDetail(
                 trackItems,
                 key = { index, _ -> songKeys.getOrElse(index) { "oob_$index" } }
             ) { index, song ->
-                key(songKeys.getOrElse(index) { "oob_$index" }) {
-                    // 统一歌曲 Item；点击 → 全部歌曲进队列，从被点击歌曲开始播放
-                    if (isWideScreen) {
-                        DetailSongRowWide(music = KugouRepository.toDisplayMediaItem(song)) {
-                            playAt(index)
-                        }
-                    } else {
-                        MusicList(KugouRepository.toDisplayMediaItem(song)) {
-                            playAt(index)
-                        }
-                    }
+                // 每行只构造一次展示模型：原先每次重组都调用 toDisplayMediaItem，
+                // 排行榜歌曲多、滚动时重组频繁，这部分是列表卡顿的来源之一。
+                val media = remember(song) { KugouRepository.toDisplayMediaItem(song) }
+                // 统一歌曲 Item；点击 → 全部歌曲进队列，从被点击歌曲开始播放
+                if (isWideScreen) {
+                    DetailSongRowWide(music = media) { playAt(index) }
+                } else {
+                    MusicList(media) { playAt(index) }
                 }
 
-                key("divider_$index") {
-                    if (index < trackItems.size - 1) {
-                        Spacer(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                // 右侧与首末分割线一致留 16dp，任何屏幕都不顶到边缘
-                                .padding(start = 88.dp, end = 16.dp)
-                                .alpha(0.15f)
-                                .height(0.5.dp)
-                                .background(Color.Black withNight Color.White)
-                        )
-                    }
+                // 分隔线直接内联（去掉多余的 key 分组，减少组合开销）
+                if (index < trackItems.size - 1) {
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            // 右侧与首末分割线一致留 16dp，任何屏幕都不顶到边缘
+                            .padding(start = 88.dp, end = 16.dp)
+                            .alpha(0.15f)
+                            .height(0.5.dp)
+                            .background(Color.Black withNight Color.White)
+                    )
                 }
             }
 
