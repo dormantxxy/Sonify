@@ -147,9 +147,11 @@ fun BottomNavigator(
             enableInteractiveHighlight = enableInteractiveHighlight,
             containerGlassEnabled = containerGlassEnabled,
             tabGlassEnabled = tabGlassEnabled,
+            // 底部间距收掉：底栏贴底（与 Coo1 一致），
+            // onSizeChanged 上报的高度随之变小 → 播放器位置自动一起下移。
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 10.dp),
+                .padding(bottom = 0.dp),
         )
     }
 }
