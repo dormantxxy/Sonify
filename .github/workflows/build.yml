@@ -45,6 +45,9 @@ jobs:
           done
           ls "$SDK/platforms" || true
 
+      - name: chmod gradlew
+        run: chmod +x gradlew
+
       - name: Build Release
         run: >
           ./gradlew :app:assembleRelease
