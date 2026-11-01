@@ -166,13 +166,12 @@ fun RankDetail(
         val titleBackdrop = rememberTitleBackdrop()
         val showSmallTitle = rememberShowSmallTitle(rememberAlpha(state), state)
 
+        // 性能：本页歌曲多、行高小，滚动时逐帧开销很敏感。
+        // 去掉 ①layerBackdrop（整张列表每帧录进离屏层）②自定义 overscroll/fling（每帧变换），
+        // 顶栏也改为透明（不模糊），换取顺滑滚动；视觉上只是「顶部不再有毛玻璃」。
         LazyColumn(
             state = state,
-            modifier = Modifier
-                .fillMaxSize()
-                .layerBackdrop(titleBackdrop)
-                .overScrollVertical(),
-            flingBehavior = rememberOverscrollFlingBehavior { state },
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 18.dp, top = 54.dp)
         ) {
             item("RankHeader") {
@@ -361,7 +360,8 @@ fun RankDetail(
             title = rank.name,
             onBack = { navController.popBackStack() },
             showSmallTitle = showSmallTitle,
-            backdrop = titleBackdrop
+            backdrop = titleBackdrop,
+            glassEnabled = false
         )
     }
 }

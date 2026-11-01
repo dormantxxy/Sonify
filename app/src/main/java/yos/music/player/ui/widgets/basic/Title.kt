@@ -931,7 +931,10 @@ fun TitleBar(
     // 关闭「工具栏液态玻璃」时的返回键着色。默认仍是主题红（primary），
     // 页面底色不是主题色的页面（如在线专辑详情的封面色底）传入自身文字色。
     // 玻璃分支无需此参数：LiquidTopBarButton 自带 adaptiveLuminance 采样。
-    backIconTint: Color? = null
+    backIconTint: Color? = null,
+    // 传 false：顶栏背景完全不画（透明，不模糊、不叠底色）。
+    // 用于「页面本身已很重、顶栏模糊拖慢滚动」的详情页（如排行榜歌曲列表）。
+    glassEnabled: Boolean = true
 ) {
     // 结构对照原版（D:\flamingo源码 Title.kt TitleBar），仅一处设备适配：
     // 原版外层 statusBarsHeight(54.dp) 在本机因 accompanist inset=0 只有 54dp、
@@ -974,6 +977,8 @@ fun TitleBar(
             Spacer(
                 modifier = Modifier
                     .then(
+                        if (!glassEnabled) Modifier
+                        else
                         // 顶栏统一使用“磨砂玻璃”效果（与关闭液态玻璃时一致）：
                         // 均匀 blur(14dp) + 半透明页面底色，不再走渐进模糊（避免模糊带过宽）。
                         run {
