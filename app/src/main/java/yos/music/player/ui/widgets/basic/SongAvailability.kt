@@ -29,8 +29,14 @@ val SongAvailability.isBlocked: Boolean get() = state == PlayState.BLOCKED
 @Composable
 fun rememberSongAvailability(music: YosMediaItem): SongAvailability {
     val hash = music.kugouHash()
-    LaunchedEffect(hash) { SongPlayabilityStore.ensureChecked(hash) }
-    return SongPlayabilityStore.stateOf(hash)
+    // 先返回已知状态（纯内存读）；探测延后 120ms：
+    // 快速滚动时该行很快离开组合，effect 被取消，不会批量发起读盘/网络探测。
+    val state = SongPlayabilityStore.stateOf(hash)
+    LaunchedEffect(hash) {
+        kotlinx.coroutines.delay(120)
+        SongPlayabilityStore.ensureChecked(hash)
+    }
+    return state
 }
 
 /**

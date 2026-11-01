@@ -112,9 +112,14 @@ object SongPlayabilityStore {
      */
     suspend fun ensureChecked(hash: String?) {
         val h = normalize(hash) ?: return
-        syncAccount()
+        // 账号同步与磁盘读取都放到 IO：这两步原先跑在调用方（主线程）上，
+        // 列表滑动时每出现一行就同步读一次 MMKV，是歌曲列表卡顿的直接原因。
+        withContext(Dispatchers.IO) {
+            syncAccount()
+            if (states.containsKey(h)) return@withContext
+            readDisk(h)?.let { states[h] = it }
+        }
         if (states.containsKey(h)) return
-        readDisk(h)?.let { states[h] = it; return }
         if (!inFlight.add(h)) return
         try {
             // 鉴权失效窗口内整账号都不准：此时探测只会刷失败，不产生结论
