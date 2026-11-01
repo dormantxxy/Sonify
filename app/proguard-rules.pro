@@ -70,10 +70,9 @@
 # Java_com_md3music_md3music_KugouApiService_native* 符号精确匹配，
 # 禁止混淆/重命名/裁剪。
 -keep class com.md3music.md3music.KugouApiService { *; }
-# ===== 诊断：release 保留类名，便于定位 release-only 崩溃 =====
+# 保留行号，便于日后崩溃栈回溯（不再关闭混淆）
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
--dontobfuscate
 
 # ===== 修复：登录后重启崩溃（ClassCastException）=====
 # Folder.playList 等模型含 List<YosMediaItem> 泛型字段，经 Gson+MMKV 持久化。
