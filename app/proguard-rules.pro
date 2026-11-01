@@ -70,3 +70,7 @@
 # Java_com_md3music_md3music_KugouApiService_native* 符号精确匹配，
 # 禁止混淆/重命名/裁剪。
 -keep class com.md3music.md3music.KugouApiService { *; }
+# ===== 诊断：release 保留类名，便于定位 release-only 崩溃 =====
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+-dontobfuscate
