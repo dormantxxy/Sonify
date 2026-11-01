@@ -1,0 +1,68 @@
+package yos.music.player.ui.navigation
+
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import yos.music.player.ui.UI
+import yos.music.player.ui.pages.library.playlists.OnlinePlaylistDetail
+import yos.music.player.ui.pages.recognition.SongRecognitionPage
+import yos.music.player.ui.pages.search.SearchPage
+
+@OptIn(ExperimentalAnimationApi::class, ExperimentalSharedTransitionApi::class)
+@Composable
+fun SearchNavHost(
+    navController: NavHostController,
+    navigator: AppNavigator,
+    modifier: Modifier = Modifier
+) {
+    SharedTransitionLayout(modifier = modifier) {
+        NavHost(
+            navController = navController,
+            startDestination = UI.Search,
+            modifier = Modifier,
+            enterTransition = { fadeIn() },
+            exitTransition = { fadeOut() },
+            popEnterTransition = { fadeIn() },
+            popExitTransition = { fadeOut() }
+        ) {
+            composable(UI.Search) {
+                SearchPage(
+                    navController = navController,
+                    onOpenSettings = { navigator.openSettings(HouseId.Search) },
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedVisibilityScope = this@composable
+                )
+            }
+            // 艺人域路由：与各 house 共享同一张图（漏注册即 "destination cannot be found"）
+            artistGraph(navController, this@SharedTransitionLayout)
+            // 听歌识曲：只从搜索页进入，故只在本 house 注册
+            composable(UI.SongRecognition) {
+                SongRecognitionPage(navController = navController)
+            }
+            composable(
+                route = UI.OnlinePlaylistDetailPattern,
+                arguments = playlistArguments()
+            ) { entry ->
+                OnlinePlaylistDetail(
+                    navController = navController,
+                    selection = entry.playlistSelection(),
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedVisibilityScope = this@composable,
+                    entryId = entry.id,
+                    scrimTransition = scrimTransition()
+                )
+            }
+            settingsGraph(
+                navController = navController,
+                onOpenLibrarySongs = navigator::openLibrarySongs
+            )
+        }
+    }
+}

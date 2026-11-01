@@ -1,0 +1,27 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+        maven { url 'https://jitpack.io' }
+        maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
+        maven { url 'https://www.jitpack.io' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        // 本地补丁版歌词库（点击范围 = 文字宽度，见 docs/LYRIC_LIB_VALIDATION.md）
+        maven { url "$rootDir/libs/maven" }
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+        maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
+        maven { url 'https://www.jitpack.io' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
+    }
+}
+rootProject.name = "Flamingo"
+include ':app'
+include ':overscroll_core'

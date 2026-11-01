@@ -1,0 +1,16 @@
+{
+  "schema": 3,
+  "name": "Sonify_work",
+  "packageName": "com.example.sonify_work",
+  "language": "KOTLIN_ANDROID",
+  "root": "\/storage\/emulated\/0\/MobiCode Studio\/Projects\/Sonify_work",
+  "minSdk": 26,
+  "targetSdk": 36,
+  "versionName": "1.0",
+  "versionCode": 1,
+  "debugMode": true,
+  "permissions": [
+    "android.permission.INTERNET"
+  ],
+  "updatedAt": 1793519844731
+}
