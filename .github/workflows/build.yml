@@ -62,6 +62,20 @@ jobs:
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
+      - name: Build Debug (未混淆，用于读取崩溃堆栈)
+        run: >
+          ./gradlew :app:assembleDebug
+          --parallel
+          --build-cache
+          --stacktrace
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonify-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
       - name: Upload reports on failure
         if: failure()
         uses: actions/upload-artifact@v4
