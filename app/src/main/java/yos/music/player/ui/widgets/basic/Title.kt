@@ -1114,17 +1114,18 @@ fun TitleBar(
                         exit = fadeOut(animationSpec = tween(120, easing = EaseInCirc))
                     ) {
                         // 与底栏一致的玻璃边缘高光（柔和渐变，不是一条硬黑线）
+                        // 颜色在组合期解析（withNight 是 @Composable，不能进绘制 lambda）
+                        val edgeColor = (Color.Black withNight Color.White).copy(alpha = 0.16f)
                         Spacer(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(1.dp)
                                 .drawWithContent {
-                                    val base = (Color.Black withNight Color.White).copy(alpha = 0.16f)
                                     drawRect(
                                         brush = Brush.horizontalGradient(
                                             0f to Color.Transparent,
-                                            0.15f to base,
-                                            0.85f to base,
+                                            0.15f to edgeColor,
+                                            0.85f to edgeColor,
                                             1f to Color.Transparent,
                                         )
                                     )
