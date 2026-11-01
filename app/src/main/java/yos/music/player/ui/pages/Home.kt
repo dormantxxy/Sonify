@@ -116,8 +116,6 @@ fun RecommendCard(imageViewModel: ImageViewModel) {
             }
         }
 
-        val pagerState = rememberPagerState(pageCount = { randomMusicList.value.size })
-
         Column(
             Modifier
                 .fillMaxWidth()
@@ -134,24 +132,29 @@ fun RecommendCard(imageViewModel: ImageViewModel) {
             val scope = rememberCoroutineScope()
 
 
-            HorizontalPager(
-                state = pagerState,
-                pageSize = PageSize.Fixed(278.dp),
+            // 用 LazyRow 替代 HorizontalPager：横向 Pager 嵌在纵向 LazyColumn 里时，
+            // 手势仲裁不稳定（横滑会被判成纵向滚动，必须等列表完全停住才能滑）。
+            // LazyRow 与 LazyColumn 是同向单轴组合，横向拖动稳定优先响应。
+            androidx.compose.foundation.lazy.LazyRow(
                 contentPadding = PaddingValues(start = 20.dp, end = 136.dp),
-                key = { randomMusicList.value[it] },
-                beyondViewportPageCount = 1
-            ) { page ->
-                val music = randomMusicList.value[page]
-                RecommendCardItem(subTitle = stringResource(id = R.string.home_recommend_subtitle),
-                    music = music,
-                    onClick = {
-                        scope.launch(Dispatchers.IO) {
-                            MediaController.prepare(
-                                music,
-                                randomMusicList.value
-                            )
-                        }
-                    })
+                horizontalArrangement = Arrangement.spacedBy(15.dp),
+            ) {
+                androidx.compose.foundation.lazy.items(
+                    items = randomMusicList.value,
+                    key = { it }
+                ) { music ->
+                    RecommendCardItem(
+                        subTitle = stringResource(id = R.string.home_recommend_subtitle),
+                        music = music,
+                        onClick = {
+                            scope.launch(Dispatchers.IO) {
+                                MediaController.prepare(
+                                    music,
+                                    randomMusicList.value
+                                )
+                            }
+                        })
+                }
             }
         }
     }
