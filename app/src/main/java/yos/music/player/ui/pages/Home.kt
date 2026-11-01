@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
@@ -135,11 +137,11 @@ fun RecommendCard(imageViewModel: ImageViewModel) {
             // 用 LazyRow 替代 HorizontalPager：横向 Pager 嵌在纵向 LazyColumn 里时，
             // 手势仲裁不稳定（横滑会被判成纵向滚动，必须等列表完全停住才能滑）。
             // LazyRow 与 LazyColumn 是同向单轴组合，横向拖动稳定优先响应。
-            androidx.compose.foundation.lazy.LazyRow(
+            LazyRow(
                 contentPadding = PaddingValues(start = 20.dp, end = 136.dp),
                 horizontalArrangement = Arrangement.spacedBy(15.dp),
             ) {
-                androidx.compose.foundation.lazy.items(
+                items(
                     items = randomMusicList.value,
                     key = { it }
                 ) { music ->
