@@ -315,7 +315,9 @@ private fun LiquidGlassTabs(
                         }
                     },
                     highlight = {
-                        Highlight.Default.copy(alpha = dampedDragAnimation.pressProgress)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            Highlight.Default.copy(alpha = dampedDragAnimation.pressProgress)
+                        } else null
                     },
                     onDrawSurface = { drawRect(containerColor) },
                 )
@@ -366,15 +368,25 @@ private fun LiquidGlassTabs(
                             )
                         }
                     },
+                    // Android 13 以下没有 RuntimeShader：高光/阴影全部跳过，只保留磨砂与底色，
+                    // 避免库内部对 shader 的强制转换抛 ClassCastException。
                     highlight = {
-                        Highlight.Default.copy(alpha = dampedDragAnimation.pressProgress)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            Highlight.Default.copy(alpha = dampedDragAnimation.pressProgress)
+                        } else null
                     },
-                    shadow = { Shadow(alpha = dampedDragAnimation.pressProgress) },
+                    shadow = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            Shadow(alpha = dampedDragAnimation.pressProgress)
+                        } else null
+                    },
                     innerShadow = {
-                        InnerShadow(
-                            radius = 8f.dp * dampedDragAnimation.pressProgress,
-                            alpha = dampedDragAnimation.pressProgress
-                        )
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            InnerShadow(
+                                radius = 8f.dp * dampedDragAnimation.pressProgress,
+                                alpha = dampedDragAnimation.pressProgress
+                            )
+                        } else null
                     },
                     onDrawSurface = {
                         val progress = dampedDragAnimation.pressProgress
