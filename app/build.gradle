@@ -6,6 +6,16 @@ plugins {
 
 android {
     namespace 'yos.music.player'
+
+    signingConfigs {
+        ciDebug {
+            storeFile file('keystore/debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
     compileSdk 37
 
     defaultConfig {
@@ -28,6 +38,7 @@ android {
 
     buildTypes {
         release {
+            signingConfig signingConfigs.ciDebug
             minifyEnabled true
             zipAlignEnabled true
             shrinkResources true
