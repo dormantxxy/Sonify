@@ -68,6 +68,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
@@ -973,19 +974,9 @@ fun TitleBar(
             Spacer(
                 modifier = Modifier
                     .then(
-                        if (SettingsLibrary.BarBlurEffect) {
-                            // 顶栏表面色 = 页面底色：设置页是分组灰、其余页白/黑。
-                            // 若这里仍写死近白，灰底设置页的顶栏会被染白而与背景脱节。
-                            val pageColor =
-                                LocalTitlePageColor.current ?: (Color.White withNight Color.Black)
-                            // 真·渐进模糊：半径随 Y 从 12dp 连续收到 0，并向栏下多延伸
-                            // 40dp 作为淡出尾巴（见 titleBarProgressiveBlur）。
-                            // 这样淡出不会被顶栏底边裁断，过渡长度也更接近原参考实现。
-                            titleBarProgressiveBlur(backdrop = backdrop, tintColor = pageColor)
-                        } else {
-                            // 关闭"工具栏液态玻璃"：顶栏改为 Haze 磨砂——采样顶栏下方内容做
-                            // 均匀模糊，并叠一层半透明页面底色（与 Haze 底栏/迷你条同源），
-                            // 取代原先的纯色块。
+                        // 顶栏统一使用“磨砂玻璃”效果（与关闭液态玻璃时一致）：
+                        // 均匀 blur(14dp) + 半透明页面底色，不再走渐进模糊（避免模糊带过宽）。
+                        run {
                             val pageColor =
                                 LocalTitlePageColor.current ?: (Color.White withNight Color.Black)
                             Modifier.drawPlainBackdrop(
@@ -1107,31 +1098,29 @@ fun TitleBar(
                     }
                 }
 
-                if (!SettingsLibrary.BarBlurEffect) {
-                    AnimatedVisibility(
-                        visible = barVisible.value,
-                        enter = fadeIn(animationSpec = tween(120, easing = EaseOut)),
-                        exit = fadeOut(animationSpec = tween(120, easing = EaseInCirc))
-                    ) {
-                        // 与底栏一致的玻璃边缘高光（柔和渐变，不是一条硬黑线）
-                        // 颜色在组合期解析（withNight 是 @Composable，不能进绘制 lambda）
-                        val edgeColor = (Color.Black withNight Color.White).copy(alpha = 0.16f)
-                        Spacer(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(1.dp)
-                                .drawWithContent {
-                                    drawRect(
-                                        brush = Brush.horizontalGradient(
-                                            0f to Color.Transparent,
-                                            0.15f to edgeColor,
-                                            0.85f to edgeColor,
-                                            1f to Color.Transparent,
-                                        )
-                                    )
-                                }
-                        )
-                    }
+                AnimatedVisibility(
+                    visible = barVisible.value,
+                    enter = fadeIn(animationSpec = tween(120, easing = EaseOut)),
+                    exit = fadeOut(animationSpec = tween(120, easing = EaseInCirc))
+                ) {
+                    // 与底栏完全一致的白边高光（白色 + Plus 叠加，两端渐隐）
+                    val edgeColor = Color.White.copy(alpha = 0.20f)
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .drawWithContent {
+                                drawRect(
+                                    brush = Brush.horizontalGradient(
+                                        0f to Color.Transparent,
+                                        0.15f to edgeColor,
+                                        0.85f to edgeColor,
+                                        1f to Color.Transparent,
+                                    ),
+                                    blendMode = BlendMode.Plus,
+                                )
+                            }
+                    )
                 }
             }
         }
