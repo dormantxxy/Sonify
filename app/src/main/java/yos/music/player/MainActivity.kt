@@ -2309,6 +2309,7 @@ YosWrapper {
     Box(
         Modifier
             .fillMaxSize()
+            .navigationBarsPadding()
             .then(
                 if (effectiveSplitMode) {
                     Modifier.padding(
