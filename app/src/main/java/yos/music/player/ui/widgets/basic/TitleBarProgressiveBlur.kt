@@ -36,14 +36,14 @@ private val MaxBlurRadius = 12.dp
  * 渐进衰减与淡出尾巴因此能延伸到顶栏下方，观感上是一条更长的过渡，
  * 而不是在顶栏底边处戛然而止。
  */
-private val BlurTail = 40.dp
+private val BlurTail = 12.dp
 
 /**
  * 淡出总长度（相对模糊层底部向上量）。它必须 ≤ 模糊层高度，
  * 且**恰好在层底降到 0**，否则层底边界处会留下一条硬边。
  * 与 [BlurTail] 的差值即"淡出从顶栏底边往上多早开始"（当前 12dp）。
  */
-private val FadeLength = 52.dp
+private val FadeLength = 24.dp
 
 /**
  * 页面底色渐变在**顶栏最顶端**的不透明度（底端恒为 0，按模糊能量 u² 平滑递增到这里）。
