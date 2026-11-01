@@ -68,6 +68,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -1111,12 +1113,22 @@ fun TitleBar(
                         enter = fadeIn(animationSpec = tween(120, easing = EaseOut)),
                         exit = fadeOut(animationSpec = tween(120, easing = EaseInCirc))
                     ) {
+                        // 与底栏一致的玻璃边缘高光（柔和渐变，不是一条硬黑线）
                         Spacer(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .alpha(0.12f)
                                 .height(1.dp)
-                                .background(Color.Black withNight Color.White)
+                                .drawWithContent {
+                                    val base = (Color.Black withNight Color.White).copy(alpha = 0.16f)
+                                    drawRect(
+                                        brush = Brush.horizontalGradient(
+                                            0f to Color.Transparent,
+                                            0.15f to base,
+                                            0.85f to base,
+                                            1f to Color.Transparent,
+                                        )
+                                    )
+                                }
                         )
                     }
                 }

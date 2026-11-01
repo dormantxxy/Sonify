@@ -7,9 +7,9 @@ import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.MutatorMutex
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,16 +18,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -47,7 +42,6 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
@@ -61,7 +55,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -90,16 +83,18 @@ import kotlin.math.sign
 @Stable
 data class NavItem(val label: String, val iconResId: Int)
 
+/** 气泡实时位置（浮点 tab 下标）。拖动过程中图标/标题跟随即时换色。 */
+private val LocalLiquidTabPosition = staticCompositionLocalOf { 0f }
+
+/** 内容层缩放（按下时轻微放大）。 */
+private val LocalLiquidBottomTabScale = staticCompositionLocalOf { 1f }
+
 /**
- * 底栏导航。
- *
- * 视觉与交互已对齐 c001apk（Coo1）的液态玻璃底栏：
- * - 悬浮胶囊：宽度 92%、高 56dp、距底 10dp + 导航栏 inset
- * - 玻璃：vibrancy + blur(8dp) + lens(24,24)（Android 13+）
- * - 选中气泡：拖拽阻尼跟随 + 透镜/色散 + 高光/阴影/内阴影
- * - Tab：图标 23dp、文字 11sp、选中 #0088FF / 未选 #9AA8BB
- *
- * 保持原有函数签名，调用点无需修改。
+ * 底栏：完全按 c001apk(Coo1) 的液态玻璃底栏移植。
+ * - 尺寸：92%（由调用点约束）、容器 64dp + 4dp padding（内部 56dp）、气泡 56dp
+ * - 玻璃：vibrancy + blur(8dp) + lens(24,24)，表面色固定 0.55（“遮罩感”来源）
+ * - 气泡：叠在内容之上，只用 lens 折射（不加 blur，避免糊住图标）
+ * - 交互：拖动阻尼跟随；拖到哪，哪的图标/标题就高亮；点击正常响应
  */
 @Composable
 fun BottomNavigator(
@@ -116,6 +111,8 @@ fun BottomNavigator(
     tabGlassEnabled: Boolean = true,
     containerTintProvider: (() -> Color)? = null
 ) {
+    if (items.isEmpty()) return
+
     var selectedIndex by rememberSaveable(items) {
         mutableIntStateOf(initialIndex.coerceIn(0, items.lastIndex))
     }
@@ -128,6 +125,7 @@ fun BottomNavigator(
 
     val selectTab: (Int) -> Unit = { index ->
         if (selectedIndex != index) {
+            selectedIndex = index
             onIndexChange(index)
         } else {
             onTabReselected(index)
@@ -135,58 +133,42 @@ fun BottomNavigator(
     }
 
     val solidCapsule = !SettingsLibrary.BarBlurEffect
-    val navBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     Box(
-        modifier = modifier
-            .fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         contentAlignment = Alignment.BottomCenter,
     ) {
         LiquidGlassTabs(
+            items = items,
             selectedIndex = selectedIndex,
-            onTabSelected = { index ->
-                selectedIndex = index
-                selectTab(index)
-            },
+            onTabSelected = selectTab,
             backdrop = backdrop,
-            tabsCount = items.size.coerceAtLeast(1),
             solidCapsule = solidCapsule,
             enableInteractiveHighlight = enableInteractiveHighlight,
             containerGlassEnabled = containerGlassEnabled,
             tabGlassEnabled = tabGlassEnabled,
-            containerTintProvider = containerTintProvider,
             modifier = Modifier
-                .fillMaxWidth(0.92f)
+                .fillMaxWidth()
                 .padding(bottom = 10.dp),
-        ) {
-            items.forEachIndexed { index, item ->
-                LiquidTabItem(
-                    item = item,
-                    selected = index == selectedIndex,
-                    onClick = { selectTab(index) },
-                )
-            }
-        }
+        )
     }
 }
 
 @Composable
 private fun LiquidGlassTabs(
+    items: List<NavItem>,
     selectedIndex: Int,
     onTabSelected: (index: Int) -> Unit,
     backdrop: Backdrop,
-    tabsCount: Int,
     solidCapsule: Boolean,
     enableInteractiveHighlight: Boolean,
     containerGlassEnabled: Boolean,
     tabGlassEnabled: Boolean,
-    containerTintProvider: (() -> Color)?,
     modifier: Modifier = Modifier,
-    content: @Composable RowScope.() -> Unit,
 ) {
+    val tabsCount = items.size.coerceAtLeast(1)
     val isLightTheme = MaterialTheme.colorScheme.background.luminance() >= 0.5f
-    // 与 Coo1 完全一致：固定 0.55 的表面色（这是"像加了层遮罩"的关键）。
-    // 不再使用外部 containerTintProvider（Sonify 传的是低透明度专辑取色，会把这层遮罩冲淡）。
+    // 固定 0.55 表面色（与 Coo1 一致）。不使用外部 tintProvider，否则遮罩感会被冲淡。
     val containerColor =
         if (isLightTheme) Color(0xFFFAFAFA).copy(alpha = 0.55f)
         else Color(0xFF121212).copy(alpha = 0.55f)
@@ -214,7 +196,7 @@ private fun LiquidGlassTabs(
 
         val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
         val animationScope = rememberCoroutineScope()
-        val dampedDragAnimation = remember(animationScope) {
+        val dampedDragAnimation = remember(animationScope, tabsCount) {
             DampedDragAnimation(
                 animationScope = animationScope,
                 initialValue = selectedIndex.toFloat(),
@@ -260,7 +242,10 @@ private fun LiquidGlassTabs(
             )
         }
 
-        // ① 外层容器：液态玻璃胶囊（模糊 + vibrancy + 透镜）+ 0.55 表面色遮罩
+        val livePosition = dampedDragAnimation.value
+        val liveIndex = livePosition.fastRoundToInt().fastCoerceIn(0, tabsCount - 1)
+
+        // ① 容器：液态玻璃胶囊 + 0.55 表面色（内含可点击的 Tab）
         Row(
             Modifier
                 .graphicsLayer {
@@ -281,7 +266,7 @@ private fun LiquidGlassTabs(
                                 lens(24f.dp.toPx(), 24f.dp.toPx())
                             }
                         } else {
-                            // 关闭液态玻璃：保留磨砂模糊（不是透明）
+                            // 关闭液态玻璃：仍保留磨砂模糊
                             blur(12f.dp.toPx())
                         }
                     },
@@ -292,49 +277,65 @@ private fun LiquidGlassTabs(
                 .fillMaxWidth()
                 .padding(4f.dp),
             verticalAlignment = Alignment.CenterVertically,
-            content = content,
-        )
-
-        // ② 隐藏内容层：alpha=0，仅用于给气泡提供折射源（Coo1 同款）
-        val contentScale = lerp(1f, 1.2f, dampedDragAnimation.pressProgress)
-        CompositionLocalProvider(
-            LocalLiquidBottomTabScale provides contentScale,
         ) {
-            Row(
-                Modifier
-                    .clearAndSetSemantics { }
-                    .alpha(0f)
-                    .layerBackdrop(tabsBackdrop)
-                    .graphicsLayer {
-                        translationX = panelOffset
-                    }
-                    .drawBackdrop(
-                        backdrop = backdrop,
-                        shape = { Capsule() },
-                        effects = {
-                            val progress = dampedDragAnimation.pressProgress
-                            vibrancy()
-                            blur(8f.dp.toPx())
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                lens(24f.dp.toPx() * progress, 24f.dp.toPx() * progress)
-                            }
-                        },
-                        highlight = {
-                            val progress = dampedDragAnimation.pressProgress
-                            Highlight.Default.copy(alpha = progress)
-                        },
-                        onDrawSurface = { drawRect(containerColor) },
+            CompositionLocalProvider(
+                LocalLiquidTabPosition provides livePosition,
+                LocalLiquidBottomTabScale provides lerp(1f, 1.2f, dampedDragAnimation.pressProgress),
+            ) {
+                items.forEachIndexed { index, item ->
+                    LiquidTabItem(
+                        item = item,
+                        index = index,
+                        liveIndex = liveIndex,
+                        interactive = true,
+                        onClick = { onTabSelected(index) },
                     )
-                    .then(if (enableInteractiveHighlight) interactiveHighlight.modifier else Modifier)
-                    .height(56f.dp)
-                    .fillMaxWidth()
-                    .padding(horizontal = 4f.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                content = content,
-            )
+                }
+            }
         }
 
-        // ③ 选中气泡：叠在内容之上做液态高光（Coo1 同款，只用 lens，不加 blur，避免糊住图标）
+        // ② 隐藏内容层：仅作气泡折射源，不可点击（否则会吃掉真实点击）
+        Row(
+            Modifier
+                .clearAndSetSemantics { }
+                .alpha(0f)
+                .layerBackdrop(tabsBackdrop)
+                .graphicsLayer { translationX = panelOffset }
+                .drawBackdrop(
+                    backdrop = backdrop,
+                    shape = { Capsule() },
+                    effects = {
+                        val progress = dampedDragAnimation.pressProgress
+                        vibrancy()
+                        blur(8f.dp.toPx())
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            lens(24f.dp.toPx() * progress, 24f.dp.toPx() * progress)
+                        }
+                    },
+                    highlight = {
+                        Highlight.Default.copy(alpha = dampedDragAnimation.pressProgress)
+                    },
+                    onDrawSurface = { drawRect(containerColor) },
+                )
+                .height(56f.dp)
+                .fillMaxWidth()
+                .padding(horizontal = 4f.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CompositionLocalProvider(LocalLiquidTabPosition provides livePosition) {
+                items.forEachIndexed { index, item ->
+                    LiquidTabItem(
+                        item = item,
+                        index = index,
+                        liveIndex = liveIndex,
+                        interactive = false,
+                        onClick = {},
+                    )
+                }
+            }
+        }
+
+        // ③ 选中气泡：叠在内容之上，只用 lens（不加 blur）
         Box(
             Modifier
                 .padding(horizontal = 4f.dp)
@@ -342,6 +343,9 @@ private fun LiquidGlassTabs(
                     translationX =
                         if (isLtr) dampedDragAnimation.value * tabWidth + panelOffset
                         else size.width - (dampedDragAnimation.value + 1f) * tabWidth + panelOffset
+                }
+                .pointerInput(Unit) {
+                    detectTapGestures { onTabSelected(liveIndex) }
                 }
                 .then(if (enableInteractiveHighlight) interactiveHighlight.gestureModifier else Modifier)
                 .then(dampedDragAnimation.modifier)
@@ -361,16 +365,14 @@ private fun LiquidGlassTabs(
                         }
                     },
                     highlight = {
-                        val progress = dampedDragAnimation.pressProgress
-                        Highlight.Default.copy(alpha = progress)
+                        Highlight.Default.copy(alpha = dampedDragAnimation.pressProgress)
                     },
-                    shadow = {
-                        val progress = dampedDragAnimation.pressProgress
-                        Shadow(alpha = progress)
-                    },
+                    shadow = { Shadow(alpha = dampedDragAnimation.pressProgress) },
                     innerShadow = {
-                        val progress = dampedDragAnimation.pressProgress
-                        InnerShadow(radius = 8f.dp * progress, alpha = progress)
+                        InnerShadow(
+                            radius = 8f.dp * dampedDragAnimation.pressProgress,
+                            alpha = dampedDragAnimation.pressProgress
+                        )
                     },
                     onDrawSurface = {
                         val progress = dampedDragAnimation.pressProgress
@@ -388,54 +390,58 @@ private fun LiquidGlassTabs(
     }
 }
 
-private val LocalLiquidBottomTabScale = staticCompositionLocalOf { 1f }
-
 @Composable
 private fun RowScope.LiquidTabItem(
     item: NavItem,
-    selected: Boolean,
+    index: Int,
+    liveIndex: Int,
+    interactive: Boolean,
     onClick: () -> Unit,
 ) {
     val scale = LocalLiquidBottomTabScale.current
     val selectedColor = Color(0xFF0088FF)
     val unselectedColor = Color(0xFF9AA8BB)
-    val tint = if (selected) selectedColor else unselectedColor
+    val tint = if (index == liveIndex) selectedColor else unselectedColor
 
-    Column(
+    Row(
         modifier = Modifier
             .weight(1f)
             .graphicsLayer {
                 scaleX = scale
                 scaleY = scale
             }
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick,
+            .then(
+                if (interactive) {
+                    Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onClick,
+                    )
+                } else Modifier
             ),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier = Modifier
-                .width(23.dp)
-                .height(23.dp),
-            contentAlignment = Alignment.Center,
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
-            Icon(
-                painter = painterResource(item.iconResId),
-                contentDescription = item.label,
-                tint = tint,
-                modifier = Modifier.fillMaxSize(),
-            )
+            Box(
+                modifier = Modifier
+                    .width(23.dp)
+                    .height(23.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(item.iconResId),
+                    contentDescription = item.label,
+                    tint = tint,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(text = item.label, fontSize = 11.sp, color = tint, maxLines = 1)
         }
-        Spacer(modifier = Modifier.height(3.dp))
-        Text(
-            text = item.label,
-            fontSize = 11.sp,
-            color = tint,
-            maxLines = 1,
-        )
     }
 }
 
@@ -451,7 +457,7 @@ private fun lerp(start: Float, stop: Float, fraction: Float): Float =
 private fun GraphicsLayerScope.fastCoerceIn(v: Float, min: Float, max: Float): Float =
     v.coerceIn(min, max)
 
-/** 拖拽阻尼动画。 */
+/** 拖拽阻尼动画（Coo1 同款）。 */
 private class DampedDragAnimation(
     private val animationScope: CoroutineScope,
     val initialValue: Float,
@@ -479,8 +485,6 @@ private class DampedDragAnimation(
     private val velocityTracker = VelocityTracker()
 
     val value: Float get() = valueAnimation.value
-    val progress: Float
-        get() = (value - valueRange.start) / (valueRange.endInclusive - valueRange.start)
     val targetValue: Float get() = valueAnimation.targetValue
     val pressProgress: Float get() = pressProgressAnimation.value
     val scaleX: Float get() = scaleXAnimation.value
@@ -552,20 +556,17 @@ private class DampedDragAnimation(
     }
 
     private fun updateVelocity() {
-        velocityTracker.addPosition(
-            System.currentTimeMillis(),
-            Offset(value, 0f),
-        )
+        velocityTracker.addPosition(System.currentTimeMillis(), Offset(value, 0f))
         val targetVelocity =
             velocityTracker.calculateVelocity().x / (valueRange.endInclusive - valueRange.start)
         animationScope.launch { velocityAnimation.animateTo(targetVelocity, velocityAnimationSpec) }
     }
 }
 
-/** 交互高亮。 */
+/** 交互高亮（Coo1 同款）。 */
 private class InteractiveHighlight(
     val animationScope: CoroutineScope,
-    val position: (size: androidx.compose.ui.geometry.Size, offset: Offset) -> Offset = { _, offset -> offset },
+    val position: (size: androidx.compose.ui.geometry.Size, offset: Offset) -> Offset = { _, o -> o },
 ) {
     private val pressProgressAnimationSpec = spring(0.5f, 300f, 0.001f)
     private val positionAnimationSpec = spring(0.5f, 300f, Offset.VisibilityThreshold)
@@ -576,7 +577,6 @@ private class InteractiveHighlight(
 
     private var startPosition = Offset.Zero
     val pressProgress: Float get() = pressProgressAnimation.value
-    val offset: Offset get() = positionAnimation.value - startPosition
 
     val modifier: Modifier =
         Modifier.drawWithContent {

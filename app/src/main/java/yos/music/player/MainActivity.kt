@@ -2383,7 +2383,7 @@ YosWrapper {
                         }
                 } else {
                     Modifier
-                        .fillMaxWidth()
+                        .fillMaxWidth(0.92f)
                         .onSizeChanged {
                             bottomBarWidthPx.intValue = it.width
                             height.intValue = it.height
