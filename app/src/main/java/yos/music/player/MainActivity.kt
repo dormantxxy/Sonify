@@ -1545,7 +1545,7 @@ class MainActivity : BaseActivity() {
                                                                 // effects 内读（库对 effects 内读取走 observeReads，
                                                                 // 值变即重建 RenderEffect 链，不触发整壳重组）。
                                                                 blur(
-                                                                    4.dp.toPx() * (1f - yosBottomSheetConfig.opticFade) *
+                                                                    8.dp.toPx() * (1f - yosBottomSheetConfig.opticFade) *
                                                                             yos.music.player.ui.widgets.liquid.glassBlurScale
                                                                 )
                                                             }
@@ -1605,7 +1605,7 @@ class MainActivity : BaseActivity() {
                                                             // 避免与过渡遮罩重复叠加。
                                                             if (!shellAnimatingForDraw) {
                                                                 val underlay = smoothStep(0.35f, 0.55f, shellProgressForDraw)
-                                                                val tint = 0.5f * (1f - shellProgressForDraw)
+                                                                val tint = 0.55f * (1f - shellProgressForDraw)
                                                                 drawRect(shellColorForDraw.copy(alpha = maxOf(tint, underlay)))
                                                                 // 提取色 tint 画在表面色之上、描边高光之下（高光由库画在
                                                                 // surface 之后）；随壳展开进度归零，全屏播放页不着色。
@@ -2309,7 +2309,6 @@ YosWrapper {
     Box(
         Modifier
             .fillMaxSize()
-            .navigationBarsPadding()
             .then(
                 if (effectiveSplitMode) {
                     Modifier.padding(
@@ -2383,7 +2382,7 @@ YosWrapper {
                         }
                 } else {
                     Modifier
-                        .fillMaxWidth(0.93f)
+                        .fillMaxWidth()
                         .onSizeChanged {
                             bottomBarWidthPx.intValue = it.width
                             height.intValue = it.height

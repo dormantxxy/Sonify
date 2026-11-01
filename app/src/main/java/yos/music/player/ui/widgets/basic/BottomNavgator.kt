@@ -139,7 +139,7 @@ fun BottomNavigator(
 
     Box(
         modifier = modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .padding(bottom = navBarInset),
         contentAlignment = Alignment.BottomCenter,
     ) {
@@ -461,7 +461,6 @@ private fun RowScope.LiquidTabItem(
             text = item.label,
             fontSize = 11.sp,
             color = tint,
-            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
             maxLines = 1,
         )
     }
