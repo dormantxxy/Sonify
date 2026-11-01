@@ -74,3 +74,11 @@
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 -dontobfuscate
+
+# ===== 修复：登录后重启崩溃（ClassCastException）=====
+# Folder.playList 等模型含 List<YosMediaItem> 泛型字段，经 Gson+MMKV 持久化。
+# R8 full mode 会剥掉未被 keep 的类的 Signature，反序列化后元素变 LinkedTreeMap，
+# UI 读取时 cast 成 YosMediaItem 直接抛 ClassCastException（仅 release、且需已登录有数据）。
+-keep class yos.music.player.data.libraries.** { <fields>; }
+-keep class yos.music.player.data.objects.** { <fields>; }
+-keepattributes Signature,InnerClasses,EnclosingMethod
