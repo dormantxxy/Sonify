@@ -185,8 +185,10 @@ private fun LiquidGlassTabs(
     content: @Composable RowScope.() -> Unit,
 ) {
     val isLightTheme = MaterialTheme.colorScheme.background.luminance() >= 0.5f
-    val containerColor = containerTintProvider?.invoke()
-        ?: if (isLightTheme) Color(0xFFFAFAFA).copy(alpha = 0.55f)
+    // 与 Coo1 完全一致：固定 0.55 的表面色（这是"像加了层遮罩"的关键）。
+    // 不再使用外部 containerTintProvider（Sonify 传的是低透明度专辑取色，会把这层遮罩冲淡）。
+    val containerColor =
+        if (isLightTheme) Color(0xFFFAFAFA).copy(alpha = 0.55f)
         else Color(0xFF121212).copy(alpha = 0.55f)
 
     val tabsBackdrop = rememberLayerBackdrop()
@@ -258,80 +260,7 @@ private fun LiquidGlassTabs(
             )
         }
 
-        // 选中气泡：画在内容之下作为高亮背景（避免玻璃遮住图标/文字）
-        Box(
-            Modifier
-                .padding(horizontal = 4f.dp)
-                .graphicsLayer {
-                    translationX =
-                        if (isLtr) dampedDragAnimation.value * tabWidth + panelOffset
-                        else size.width - (dampedDragAnimation.value + 1f) * tabWidth + panelOffset
-                }
-                .then(if (enableInteractiveHighlight) interactiveHighlight.gestureModifier else Modifier)
-                .then(dampedDragAnimation.modifier)
-                .then(
-                    if (tabGlassEnabled && !solidCapsule) {
-                        Modifier.drawBackdrop(
-                            backdrop = backdrop,
-                            shape = { Capsule() },
-                            effects = {
-                                val progress = dampedDragAnimation.pressProgress
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    lens(
-                                        10f.dp.toPx() * progress,
-                                        14f.dp.toPx() * progress,
-                                        chromaticAberration = true
-                                    )
-                                }
-                            },
-                            highlight = {
-                                val progress = dampedDragAnimation.pressProgress
-                                Highlight.Default.copy(alpha = progress)
-                            },
-                            shadow = {
-                                val progress = dampedDragAnimation.pressProgress
-                                Shadow(alpha = progress)
-                            },
-                            innerShadow = {
-                                val progress = dampedDragAnimation.pressProgress
-                                InnerShadow(radius = 8f.dp * progress, alpha = progress)
-                            },
-                            onDrawSurface = {
-                                val progress = dampedDragAnimation.pressProgress
-                                drawRect(
-                                    if (isLightTheme) Color.Black.copy(alpha = 0.1f)
-                                    else Color.White.copy(alpha = 0.1f),
-                                    alpha = 1f - progress,
-                                )
-                                drawRect(Color.Black.copy(alpha = 0.03f * progress))
-                            },
-                        )
-                    } else {
-                        // 关闭液态玻璃时气泡也用磨砂，保证形状/尺寸与玻璃态一致
-                        Modifier.drawBackdrop(
-                            backdrop = backdrop,
-                            shape = { Capsule() },
-                            effects = { blur(10f.dp.toPx()) },
-                            highlight = {
-                                val progress = dampedDragAnimation.pressProgress
-                                Highlight.Default.copy(alpha = progress)
-                            },
-                            onDrawSurface = {
-                                val progress = dampedDragAnimation.pressProgress
-                                drawRect(
-                                    if (isLightTheme) Color.Black.copy(alpha = 0.10f)
-                                    else Color.White.copy(alpha = 0.12f),
-                                    alpha = 1f - progress,
-                                )
-                            },
-                        )
-                    }
-                )
-                .height(56f.dp)
-                .fillMaxWidth(1f / tabsCount),
-        )
-
-        // 外层：液态玻璃胶囊容器
+        // ① 外层容器：液态玻璃胶囊（模糊 + vibrancy + 透镜）+ 0.55 表面色遮罩
         Row(
             Modifier
                 .graphicsLayer {
@@ -341,29 +270,22 @@ private fun LiquidGlassTabs(
                     scaleX = scale
                     scaleY = scale
                 }
-                .then(
-                    if (containerGlassEnabled && !solidCapsule) {
-                        Modifier.drawBackdrop(
-                            backdrop = backdrop,
-                            shape = { Capsule() },
-                            effects = {
-                                vibrancy()
-                                blur(8f.dp.toPx())
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    lens(24f.dp.toPx(), 24f.dp.toPx())
-                                }
-                            },
-                            onDrawSurface = { drawRect(containerColor) },
-                        )
-                    } else {
-                        // 关闭液态玻璃时仍保留磨砂模糊（不是透明）
-                        Modifier.drawBackdrop(
-                            backdrop = backdrop,
-                            shape = { Capsule() },
-                            effects = { blur(12f.dp.toPx()) },
-                            onDrawSurface = { drawRect(containerColor) },
-                        )
-                    }
+                .drawBackdrop(
+                    backdrop = backdrop,
+                    shape = { Capsule() },
+                    effects = {
+                        if (containerGlassEnabled && !solidCapsule) {
+                            vibrancy()
+                            blur(8f.dp.toPx())
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                lens(24f.dp.toPx(), 24f.dp.toPx())
+                            }
+                        } else {
+                            // 关闭液态玻璃：保留磨砂模糊（不是透明）
+                            blur(12f.dp.toPx())
+                        }
+                    },
+                    onDrawSurface = { drawRect(containerColor) },
                 )
                 .then(if (enableInteractiveHighlight) interactiveHighlight.modifier else Modifier)
                 .height(64f.dp)
@@ -373,14 +295,14 @@ private fun LiquidGlassTabs(
             content = content,
         )
 
-        // 内容层（隐藏，仅用于捕获 backdrop，提供真实内容给气泡折射）
+        // ② 隐藏内容层：alpha=0，仅用于给气泡提供折射源（Coo1 同款）
         val contentScale = lerp(1f, 1.2f, dampedDragAnimation.pressProgress)
         CompositionLocalProvider(
             LocalLiquidBottomTabScale provides contentScale,
         ) {
             Row(
                 Modifier
-                    .clearAndSetSemantics {}
+                    .clearAndSetSemantics { }
                     .alpha(0f)
                     .layerBackdrop(tabsBackdrop)
                     .graphicsLayer {
@@ -412,6 +334,57 @@ private fun LiquidGlassTabs(
             )
         }
 
+        // ③ 选中气泡：叠在内容之上做液态高光（Coo1 同款，只用 lens，不加 blur，避免糊住图标）
+        Box(
+            Modifier
+                .padding(horizontal = 4f.dp)
+                .graphicsLayer {
+                    translationX =
+                        if (isLtr) dampedDragAnimation.value * tabWidth + panelOffset
+                        else size.width - (dampedDragAnimation.value + 1f) * tabWidth + panelOffset
+                }
+                .then(if (enableInteractiveHighlight) interactiveHighlight.gestureModifier else Modifier)
+                .then(dampedDragAnimation.modifier)
+                .drawBackdrop(
+                    backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
+                    shape = { Capsule() },
+                    effects = {
+                        val progress = dampedDragAnimation.pressProgress
+                        if (tabGlassEnabled && !solidCapsule &&
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                        ) {
+                            lens(
+                                10f.dp.toPx() * progress,
+                                14f.dp.toPx() * progress,
+                                chromaticAberration = true
+                            )
+                        }
+                    },
+                    highlight = {
+                        val progress = dampedDragAnimation.pressProgress
+                        Highlight.Default.copy(alpha = progress)
+                    },
+                    shadow = {
+                        val progress = dampedDragAnimation.pressProgress
+                        Shadow(alpha = progress)
+                    },
+                    innerShadow = {
+                        val progress = dampedDragAnimation.pressProgress
+                        InnerShadow(radius = 8f.dp * progress, alpha = progress)
+                    },
+                    onDrawSurface = {
+                        val progress = dampedDragAnimation.pressProgress
+                        drawRect(
+                            if (isLightTheme) Color.Black.copy(alpha = 0.10f)
+                            else Color.White.copy(alpha = 0.10f),
+                            alpha = 1f - progress,
+                        )
+                        drawRect(Color.Black.copy(alpha = 0.03f * progress))
+                    },
+                )
+                .height(56f.dp)
+                .fillMaxWidth(1f / tabsCount),
+        )
     }
 }
 
