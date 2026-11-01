@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -61,6 +61,23 @@ jobs:
           name: sonify-apk
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
+
+      - name: Publish Release (每次构建独立发布，不覆盖)
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Sonify build ${{ github.run_number }}
+          body: |
+            自动构建产物（不覆盖历史版本）
+            - commit: ${{ github.sha }}
+            - run: ${{ github.run_id }}
+          files: app/build/outputs/apk/release/*.apk
+          draft: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Debug (未混淆，用于读取崩溃堆栈)
         run: >
