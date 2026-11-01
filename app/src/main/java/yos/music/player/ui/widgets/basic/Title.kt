@@ -503,7 +503,7 @@ private fun BaseTitleList(
 ) {
     val state = listState
     // Nexio 式二态折叠：大标题触及栏缘前不透明、没入后小标题才出现、松手吸附到两端
-    val collapse = rememberTitleCollapse(state, extraTopPadding)
+    val collapse = rememberTitleCollapse(state, extraTopPadding, settleEnabled = customOverscroll)
 
     // 默认右上角图标：用于一级 Tab 页面（Home / Discovery / Library / Search）。
     // 当调用方没有自定义 rightBarIcon 但传了 topRightIcon + onTopRightIcon 时，
@@ -671,8 +671,13 @@ fun Modifier.titleCollapseTouchTracker(state: TitleCollapseState): Modifier =
  * 该距离内大标题还在栏外自由区，必须保持完全不透明。
  */
 @Composable
-fun rememberTitleCollapse(state: LazyListState, extraTopPadding: Dp = 0.dp): TitleCollapseState =
+fun rememberTitleCollapse(
+    state: LazyListState,
+    extraTopPadding: Dp = 0.dp,
+    settleEnabled: Boolean = true
+): TitleCollapseState =
     rememberTitleCollapseImpl(
+        settleEnabled = settleEnabled,
         scrollable = state,
         firstItemInfo = {
             state.layoutInfo.visibleItemsInfo.firstOrNull { it.index == 0 }
@@ -683,8 +688,13 @@ fun rememberTitleCollapse(state: LazyListState, extraTopPadding: Dp = 0.dp): Tit
     )
 
 @Composable
-fun rememberTitleCollapse(state: LazyGridState, extraTopPadding: Dp = 0.dp): TitleCollapseState =
+fun rememberTitleCollapse(
+    state: LazyGridState,
+    extraTopPadding: Dp = 0.dp,
+    settleEnabled: Boolean = true
+): TitleCollapseState =
     rememberTitleCollapseImpl(
+        settleEnabled = settleEnabled,
         scrollable = state,
         firstItemInfo = {
             state.layoutInfo.visibleItemsInfo.firstOrNull { it.index == 0 }
@@ -699,7 +709,8 @@ private fun rememberTitleCollapseImpl(
     scrollable: ScrollableState,
     firstItemInfo: () -> Pair<Int, Int>?,
     isLayoutReady: () -> Boolean,
-    extraTopPadding: Dp
+    extraTopPadding: Dp,
+    settleEnabled: Boolean = true
 ): TitleCollapseState {
     val density = LocalDensity.current
     // 与 TitleItem 内部 Spacer(statusBarsHeight()) 同源（RawWindowInsets raw 读数），保证几何一致
@@ -737,7 +748,10 @@ private fun rememberTitleCollapseImpl(
     // 吸附动画用 dispatchRawDelta 直写（不经滚动锁）：animateScrollBy 会排在仍在
     // 运行的衰减动画后面，锁等待同样造成延迟。手指按住时暂停吸附（touchActive），
     // 抬起后由 ③ 兜底重评估。
-    LaunchedEffect(scrollable, extraPx, statusPx) {
+    LaunchedEffect(scrollable, extraPx, statusPx, settleEnabled) {
+        // 主页等页面关闭吸附：吸附会在松手后自行滚动 180ms，
+        // 与用户的横向手势抢方向（表现为"横滑变纵向、必须等页面完全停住"）。
+        if (!settleEnabled) return@LaunchedEffect
         var snapJob: Job? = null
         var snapTarget = Float.NaN
         val fingerDown = touchActive
