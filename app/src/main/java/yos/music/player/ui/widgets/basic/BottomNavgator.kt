@@ -284,11 +284,17 @@ private fun LiquidGlassTabs(
                             onDrawSurface = { drawRect(containerColor) },
                         )
                     } else {
-                        Modifier.background(containerColor, Capsule())
+                        // 关闭液态玻璃时仍保留磨砂模糊（不是透明）
+                        Modifier.drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { Capsule() },
+                            effects = { blur(12f.dp.toPx()) },
+                            onDrawSurface = { drawRect(containerColor) },
+                        )
                     }
                 )
                 .then(if (enableInteractiveHighlight) interactiveHighlight.modifier else Modifier)
-                .height(56f.dp)
+                .height(64f.dp)
                 .fillMaxWidth()
                 .padding(4f.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -383,10 +389,23 @@ private fun LiquidGlassTabs(
                             },
                         )
                     } else {
-                        Modifier.background(
-                            if (isLightTheme) Color.Black.copy(alpha = 0.06f)
-                            else Color.White.copy(alpha = 0.10f),
-                            Capsule(),
+                        // 关闭液态玻璃时气泡也用磨砂，保证形状/尺寸与玻璃态一致
+                        Modifier.drawBackdrop(
+                            backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
+                            shape = { Capsule() },
+                            effects = { blur(10f.dp.toPx()) },
+                            highlight = {
+                                val progress = dampedDragAnimation.pressProgress
+                                Highlight.Default.copy(alpha = progress)
+                            },
+                            onDrawSurface = {
+                                val progress = dampedDragAnimation.pressProgress
+                                drawRect(
+                                    if (isLightTheme) Color.Black.copy(alpha = 0.10f)
+                                    else Color.White.copy(alpha = 0.12f),
+                                    alpha = 1f - progress,
+                                )
+                            },
                         )
                     }
                 )

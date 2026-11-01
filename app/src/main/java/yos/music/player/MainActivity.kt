@@ -1578,7 +1578,7 @@ class MainActivity : BaseActivity() {
                                                                 blurRadius = if (shellIsNight) 0.1f.dp else 0.2f.dp,
                                                                 alpha = 1f,
                                                                 style = WrapHighlightStyle(
-                                                                    color = Color.Black.copy(alpha = if (shellIsNight) 0.4f else 0.5f),
+                                                                    color = Color.Transparent, // 去掉黑色描边（用户要求与底栏一致）
                                                                     blendMode = BlendMode.SrcOver,
                                                                     angle = 0f,
                                                                     falloff = 0.9f,
@@ -1653,7 +1653,7 @@ class MainActivity : BaseActivity() {
                                                                 blurRadius = if (shellIsNight) 0.1f.dp else 0.2f.dp,
                                                                 alpha = 1f,
                                                                 style = WrapHighlightStyle(
-                                                                    color = Color.Black.copy(alpha = if (shellIsNight) 0.4f else 0.5f),
+                                                                    color = Color.Transparent, // 去掉黑色描边（用户要求与底栏一致）
                                                                     blendMode = BlendMode.SrcOver,
                                                                     angle = 0f,
                                                                     falloff = 0.9f,
