@@ -230,6 +230,7 @@ fun Title(
         titleHorizontalPadding = titleHorizontalPadding,
         onRefresh = onRefresh,
         refreshing = refreshing,
+        customOverscroll = customOverscroll,
         content = content
     )
 
@@ -290,6 +291,7 @@ private fun BaseTitle(
     titleHorizontalPadding: Dp = 20.dp,
     onRefresh: (() -> Unit)? = null,
     refreshing: Boolean = false,
+    customOverscroll: Boolean = true,
     content: Any
 ) {
     if (grid) {
@@ -325,6 +327,7 @@ private fun BaseTitle(
             listState = listState,
             onRefresh = onRefresh,
             refreshing = refreshing,
+            customOverscroll = customOverscroll,
             content = content as LazyListScope.() -> Unit
         )
     }
@@ -421,12 +424,8 @@ private fun BaseTitleGrid(
                         .titleCollapseTouchTracker(collapse)
                         .hazeSource(hazeState)
                         .layerBackdrop(titleBackdrop)
-                        .then(if (customOverscroll) Modifier.overScrollVertical() else Modifier),
-                    flingBehavior = if (customOverscroll) {
-                        rememberOverscrollFlingBehavior { state }
-                    } else {
-                        androidx.compose.foundation.gestures.ScrollableDefaults.flingBehavior()
-                    },
+                        .overScrollVertical(),
+                    flingBehavior = rememberOverscrollFlingBehavior { state },
                     columns = GridCells.Adaptive(minSize = minItemSize),
                     horizontalArrangement = Arrangement.spacedBy(15.dp),
                     verticalArrangement = Arrangement.spacedBy(20.dp),
@@ -499,6 +498,7 @@ private fun BaseTitleList(
     titleHorizontalPadding: Dp = 20.dp,
     onRefresh: (() -> Unit)? = null,
     refreshing: Boolean = false,
+    customOverscroll: Boolean = true,
     content: LazyListScope.() -> Unit
 ) {
     val state = listState
@@ -538,8 +538,12 @@ private fun BaseTitleList(
                         .titleCollapseTouchTracker(collapse)
                         .hazeSource(hazeState)
                         .layerBackdrop(titleBackdrop)
-                        .overScrollVertical(),
-                    flingBehavior = rememberOverscrollFlingBehavior { state },
+                        .then(if (customOverscroll) Modifier.overScrollVertical() else Modifier),
+                    flingBehavior = if (customOverscroll) {
+                        rememberOverscrollFlingBehavior { state }
+                    } else {
+                        androidx.compose.foundation.gestures.ScrollableDefaults.flingBehavior()
+                    },
                     contentPadding = PaddingValues(top = 54.dp + extraTopPadding)
                 ) {
                     item("title") {
